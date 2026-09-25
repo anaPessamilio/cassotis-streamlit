@@ -6,7 +6,7 @@ Passo a passo para configurar o ambiente Python e rodar a aplicação.
 
 - Python 3.10 ou superior instalado ([download](https://www.python.org/downloads/))
 - Terminal (Prompt de Comando, PowerShell ou terminal do macOS/Linux)
-- Licença do Gurobi configurada (acadêmica gratuita em [gurobi.com](https://www.gurobi.com/academia/academic-program-and-licenses/))
+- Dependências do projeto instaladas no ambiente virtual
 
 ## 1. Criar o ambiente virtual (venv)
 

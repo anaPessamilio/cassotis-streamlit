@@ -2,11 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.graph_objects as go
-import gurobipy as gp
-from gurobipy import GRB
 from streamlit_pdf_viewer import pdf_viewer
-
-st.cache_data.clear()
 
 @st.cache_data
 def carregar_dados(filepath="data_piles.json"):
@@ -14,42 +10,6 @@ def carregar_dados(filepath="data_piles.json"):
         return json.load(f)
 
 data = carregar_dados()
-
-def gurobi_model(data):
-
-    model = gp.Model("Pile_Case_UFMG")
-
-    # ----- Sets ------
-    Products = data["Products"]
-    QualityIndicators = data["QualityIndicators"]
-    Equipments = data["Equipments"]
-    Piles = data["Piles"]
-
-    # ---- Param ------
-    price = data["m_product_price"]
-    avail = data["m_product_delivery_availabity"]
-    qual = data["m_product_quality"]
-    compat = data["m_product_equipment"]
-    equip_specs = data["m_equipment_quality_specs"]
-    p_weight_target = data["m_pile_weight"]
-
-    # --- Variáveis de decisão ---
-    # TODO: definir variáveis
-
-    # --- Restrições ---
-    # TODO: definir restrições
-
-    # --- Função Objetivo ---
-    # TODO: definir função objetivo
-
-    # --- Resolver ---
-    model.setParam('TimeLimit', 600)
-    model.optimize()
-
-    has_solution = model.Status in [GRB.OPTIMAL, GRB.TIME_LIMIT] and model.SolCount > 0
-
-    return has_solution, model
-
 
 # =========================================================================================================
 
@@ -71,14 +31,13 @@ with st.sidebar:
 
     aba_selecionada = st.radio(
         "Ir para:",
-        ["Material auxiliar", "Dados de Entrada", "Código do Modelo", "Resultados"]
+        ["Material auxiliar", "Dados de Entrada", "Decisões de Modelagem", "Resultados"]
     )
     
     st.divider()
     st.caption("Material desenvolvido e elaborado por Cassotis Consulting")
 
 
-# tab_pdf, tab_input, tab_code, tab_output = st.tabs(["Material auxiliar", "Dados de Entrada", "Código do Modelo", "Resultados"])
 
 if aba_selecionada == "Material auxiliar":
     st.header("Material Auxiliar")
@@ -169,7 +128,7 @@ elif aba_selecionada == "Dados de Entrada":
     ORANGE = "#eb6834"
     AQUA = "#1baf7a"
 
-    # 1. Bar chart — Preço por minério (magnitude comparison)
+    # 1. Preço por minério
     st.subheader("Preço por Minério")
     minerios = data["Products"]
     precos = [data["m_product_price"][m] for m in minerios]
@@ -189,6 +148,35 @@ elif aba_selecionada == "Dados de Entrada":
     )
     fig_preco.update_yaxes(gridcolor="#e5e5e5", gridwidth=1, zeroline=False)
     st.plotly_chart(fig_preco, use_container_width=True)
+
+    # 2. Disponibilidade por minério (faixa min-max)
+    st.subheader("Disponibilidade por Minério (nº de caminhões)")
+    disp_min = [data["m_product_delivery_availabity"][m]["min"] for m in minerios]
+    disp_max = [data["m_product_delivery_availabity"][m]["max"] for m in minerios]
+
+    fig_disp = go.Figure()
+    fig_disp.add_trace(go.Bar(
+        x=minerios, y=disp_min,
+        name="Mínimo",
+        marker_color=BLUE, marker_line_width=0,
+    ))
+    fig_disp.add_trace(go.Bar(
+        x=minerios, y=[mx - mn for mx, mn in zip(disp_max, disp_min)],
+        name="Faixa disponível",
+        marker_color=AQUA, marker_line_width=0,
+        text=disp_max, textposition="outside", textfont_size=10,
+    ))
+    fig_disp.update_layout(
+        barmode="stack",
+        yaxis_title="Nº de caminhões",
+        xaxis_title="Minério",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(t=30, b=40),
+        height=380,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig_disp.update_yaxes(gridcolor="#e5e5e5", gridwidth=1, zeroline=False)
+    st.plotly_chart(fig_disp, use_container_width=True)
 
     # 3. Desvio em relação ao alvo — Sinter 1
     st.subheader("Desvio da Qualidade vs. Alvo — Sinter 1")
@@ -246,45 +234,45 @@ elif aba_selecionada == "Dados de Entrada":
         fig_dev.update_yaxes(gridcolor="#e5e5e5", gridwidth=1, zeroline=False)
         st.plotly_chart(fig_dev, use_container_width=True)
 
-elif aba_selecionada == "Código do Modelo":
-    st.header("Instanciando o Modelo")
-    st.markdown("Exemplo da estruturação dos conjuntos e parâmetros a partir dos dados de entrada:")
-    
-    code_snippet = '''
+elif aba_selecionada == "Decisões de Modelagem":
+    st.header("Decisões de Modelagem")
+    st.markdown("""
+    Nesta seção, descreva e justifique as principais decisões tomadas na construção do modelo e do algoritmo de solução.
+    """)
 
-    def carregar_dados(filepath="data_piles.json"):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    st.subheader("1. Codificação do Problema")
+    st.info("Apresente a representação (codificação) adotada para a solução do problema — como um plano é descrito como estrutura de dados.")
 
-    data = carregar_dados()
+    st.subheader("2. Estruturas de Vizinhança")
+    st.info("Descreva as estruturas de vizinhança propostas (mínimo 3) e justifique a escolha de cada uma. Explique também como soluções inviáveis geradas pelos movimentos são tratadas.")
 
-    model = gp.Model("Pile_Case_UFMG")
+    st.subheader("3. Heurística Construtiva (Solução Inicial)")
+    st.info("Explique a heurística utilizada para gerar a solução inicial e por que essa abordagem foi escolhida.")
 
-    # ----- Sets ------
-    Products = data["Products"]
-    QualityIndicators = data["QualityIndicators"]
-    Equipments = data["Equipments"]
-    Piles = data["Piles"]
+    st.subheader("4. Métodos de Auxílio à Tomada de Decisão")
+    st.info("Indique quais métodos multicritério foram escolhidos para apoiar a decisão e justifique a escolha.")
 
-    # ---- Param ------
-    price = data["m_product_price"]
-    avail = data["m_product_delivery_availabity"]
-    qual = data["m_product_quality"]
-    compat = data["m_product_equipment"]
-    equip_specs = data["m_equipment_quality_specs"]
-    p_weight_target = data["m_pile_weight"]
-    '''
-    st.code(code_snippet, language='python')
+    st.subheader("5. Atributos de Interesse")
+    st.info("Liste os atributos de interesse considerados na análise multicritério e justifique por que foram selecionados.")
 
 elif aba_selecionada == "Resultados":
     st.header("Resultados do Modelo")
-    
-    if st.button("Executar Modelo", type="primary"):
-        with st.spinner("Resolvendo modelo..."):
-            has_solution, model = gurobi_model(data)
-            
-            if has_solution:
-                st.success(f"Solução ótima encontrada. OF: {model.ObjVal:.4f}")
-                
-            else:
-                st.error("Não foi possível encontrar solução viável.")
+    st.markdown("""
+    As seções abaixo são sugestões de estrutura para a apresentação dos resultados.
+    **Vocês são incentivados a ir além** — acrescentem análises, visualizações e discussões adicionais que considerem relevantes.
+    """)
+
+    st.subheader("1. Soluções por Objetivo")
+    st.info("Apresente os resultados obtidos para cada função objetivo (f₁: custo, f₂: desvio SiO₂, f₃: desvio Al₂O₃), otimizadas separadamente.")
+
+    st.subheader("2. Composição das Pilhas")
+    st.info("Mostre a alocação de minérios por pilha — quais minérios, quantos caminhões, e a qualidade resultante de cada pilha.")
+
+    st.subheader("3. Qualidade Obtida vs. Especificações")
+    st.info("Compare os teores de SiO₂ e Al₂O₃ obtidos em cada pilha com os limites mín/alvo/máx de cada equipamento.")
+
+    st.subheader("4. Fronteira de Pareto")
+    st.info("Apresente a fronteira de Pareto encontrada pela metaheurística, mostrando os trade-offs entre os objetivos.")
+
+    st.subheader("5. Ranking Multicritério")
+    st.info("Exiba o resultado do método de auxílio à tomada de decisão aplicado sobre as soluções da fronteira de Pareto.")

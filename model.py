@@ -61,13 +61,13 @@ NOMES_CRIT = ["f1 · Custo", "f2 · Desvio SiO₂", "f3 · Desvio Al₂O₃", "f
 CURTO_CRIT = ["Custo", "SiO₂", "Al₂O₃", "Homogeneidade"]
 
 MODOS_AHP = {
-    "faixa_ref": "Faixa de referência da Entrega 1 (recomendada pelo enunciado)",
+    "faixa_ref": "Faixa de referência da Entrega 1 — adotada",
     "faixa_front": "Faixa da fronteira global",
-    "inverso": "Inverso (versão original do mcda.py)",
+    "inverso": "Inverso, 1/valor (teste de sensibilidade)",
 }
 MODOS_PROM = {
     "prop": f"Proporcionais à faixa de referência (q = {Q_FRAC:.0%}, p = {P_FRAC:.0%}) — adotada",
-    "orig": "Absolutos originais (teste de sensibilidade)",
+    "orig": "Absolutos (teste de sensibilidade)",
 }
 
 BLUE, ORANGE, AQUA, RED, GOLD, GRAY = "#2a78d6", "#eb6834", "#1baf7a", "#d6336c", "#e0a800", "#9aa0a6"
@@ -543,16 +543,14 @@ centenas de pontos quase idênticos.
 
 ELECTRE foi descartado por produzir, em geral, uma relação parcial (núcleo) menos direta de comparar com o ranking completo do AHP.
 
-**Normalização do AHP — decisão e correção.** A primeira versão normalizava cada critério pelo **inverso** do valor.
-Isso distorce os pesos: o custo varia só ~2% entre as alternativas, então, mesmo com 52% de peso declarado, ele quase não
-influenciava o ranking. O enunciado pede usar os **valores isolados da Entrega 1 como referência de normalização**;
-por isso a versão adotada é **min-max linear pela faixa [melhor, pior] da Entrega 1** para f1–f3 (f4 não tem referência
-na Entrega 1 e usa a faixa da fronteira global). A aba *Resultados* permite comparar as três normalizações.
+**Normalização do AHP.** Cada critério é normalizado por **min-max linear pela faixa [melhor, pior] dos valores isolados da
+Entrega 1** para f1–f3 (f4 não tem referência na Entrega 1 e usa a faixa da fronteira global). Assim, a escala reflete a
+amplitude real de cada critério e os pesos declarados determinam a influência de cada um no ranking. A aba *Resultados*
+permite comparar com a faixa da fronteira global e com a normalização pelo inverso (1/valor), como teste de sensibilidade.
 
-**Limiares do PROMETHEE — adotados proporcionais.** Os valores absolutos originais correspondem a percentuais bem
-diferentes da faixa de cada critério (o custo era tolerado ~2× mais que os demais), o que contradiz o peso declarado do custo.
-A versão adotada define **q = {Q_FRAC:.0%} e p = {P_FRAC:.0%} da faixa de referência de cada critério**, tratando todos da mesma
-forma; os absolutos ficam disponíveis apenas como teste de sensibilidade.
+**Limiares do PROMETHEE.** São **proporcionais à faixa de referência de cada critério: q = {Q_FRAC:.0%} e p = {P_FRAC:.0%}**,
+o que trata todos os critérios da mesma forma e preserva os pesos declarados. Limiares absolutos (tabela abaixo) são
+usados apenas como teste de sensibilidade.
 
 **Justificativa da matriz de Saaty.** Os julgamentos (escala 1–9) seguem a lógica do problema:
 
@@ -577,7 +575,7 @@ Os pesos resultantes (≈ 52% / 20% / 20% / 8%) são um **julgamento do grupo, s
         st.dataframe(pd.DataFrame(SAATY, index=CURTO_CRIT, columns=CURTO_CRIT).round(3), width="stretch")
     with cs2:
         st.dataframe(pd.DataFrame({"Peso": pesos_txt}, index=CURTO_CRIT).style.format("{:.1%}"), width="stretch")
-    st.markdown("**Limiares absolutos originais do PROMETHEE II (apenas para teste de sensibilidade; a versão adotada é proporcional à faixa)**")
+    st.markdown("**Limiares absolutos do PROMETHEE II (usados apenas como teste de sensibilidade)**")
     st.dataframe(pd.DataFrame({"q (indiferença)": Q_LIM, "p (preferência)": P_LIM}, index=NOMES_CRIT), width="stretch")
 
     st.subheader("5. Atributos de Interesse")
@@ -636,7 +634,7 @@ elif aba_selecionada == "Resultados":
         with cB:
             modo_prom = st.radio("Limiares do PROMETHEE II", list(MODOS_PROM), format_func=MODOS_PROM.get, index=0,
                                  help="Padrão: limiares proporcionais à faixa de cada critério, coerentes com os pesos declarados.")
-        st.caption("Padrão adotado: normalização pela faixa da Entrega 1 (como pede o enunciado) e limiares do PROMETHEE "
+        st.caption("Padrão adotado: normalização pela faixa da Entrega 1 e limiares do PROMETHEE "
                    "proporcionais à faixa. As demais opções existem para teste de sensibilidade; a tabela da aba 4 mostra "
                    "a vencedora em todas as combinações.")
 
@@ -984,7 +982,7 @@ dos casos com variação de ±9 p.p. no peso do custo, e em **{mc100[0][i_rec]:.
             st.markdown(f"No AHP, {r} vence enquanto o peso do custo for ≥ **{iv[0]:.0%}** (declarado: {br(w0[0] * 100, 1)}%). "
                         + (f"Abaixo disso, a vencedora passa a ser **{rotulos[iv[3]]}**." if iv[3] is not None else ""))
 
-        st.markdown("**O que se abre mão (ressalvas que devem constar no relatório)**")
+        st.markdown("**Ressalvas da recomendação**")
         ref_alt = i_alt
         d_ = M[i_rec] - M[ref_alt]
         st.markdown(f"- Em relação à {rotulos[ref_alt]} (a vencedora se o custo pesar menos): economiza **R$ {mi(abs(d_[0]))} mi "
@@ -1082,17 +1080,16 @@ dos casos com variação de ±9 p.p. no peso do custo, e em **{mc100[0][i_rec]:.
                           "quase iguais entre si, o ganho adicional de homogeneizá-las é pequeno; o custo do desvio está na média.")
         else:
             texto_vies = "Sem os .npz não é possível decompor o desvio em viés e variação."
-        st.markdown("#### Limitações a reconhecer no relatório")
+        st.markdown("#### Limitações")
         st.markdown(f"""
 1. **Gap das heurísticas.** O menor custo exato do problema é R$ {mi(LIMITES_EXATOS['f1'])} mi; o melhor f1 do VNS
    na Entrega 1 ficou ~3% acima disso, e os extremos de f2 e f3 também não são ótimos certificados (aba 1). A fronteira é
    uma aproximação; o VNS é estocástico e não prova otimalidade.
-2. **Referências de normalização superadas.** A Entrega 2 achou valores melhores que as referências da Entrega 1;
-   as referências não são o ideal verdadeiro.
-3. **Normalização, limiares e pesos são julgamentos.** A normalização pelo inverso (versão original) praticamente
-   ignorava o custo, e os limiares absolutos toleram ~2× mais diferença de custo (em % da faixa); por isso foram substituídos
-   pela normalização por faixa e por limiares proporcionais, coerentes com o peso declarado. A recomendação continua condicional
-   ao julgamento de Saaty (tabela acima).
+2. **Referências de normalização não são o ideal verdadeiro.** A Entrega 2 encontrou valores melhores que os extremos
+   isolados da Entrega 1; por isso a normalização pode gerar valores levemente fora de [0, 1].
+3. **Normalização, limiares e pesos são julgamentos.** Foram adotadas a normalização por faixa e os limiares proporcionais
+   por serem coerentes com o peso declarado do custo. A normalização pelo inverso e os limiares absolutos reduzem a influência
+   efetiva do custo e levam à Alt 5 (ver sensibilidade). A recomendação é condicional ao julgamento de Saaty (tabela acima).
 4. **Os dois métodos não são independentes:** o PROMETHEE reutiliza os pesos do AHP, e a matriz de Saaty é um
    julgamento do grupo, sem validação externa. A concordância entre os métodos mostra que a escolha não é artefato da regra de agregação, mas não valida os pesos.
 5. **f4 é medido em caminhões absolutos** e não entra na geração da fronteira (apenas na decisão); as pilhas têm
